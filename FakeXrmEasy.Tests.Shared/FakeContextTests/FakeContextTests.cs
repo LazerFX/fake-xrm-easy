@@ -4,6 +4,8 @@ using Xunit;
 using FakeItEasy;
 using FakeXrmEasy;
 
+using XrmToolkit.ProxyClasses;
+
 using System.Collections.Generic;
 using Microsoft.Xrm.Sdk;
 using System.Linq;
@@ -11,6 +13,7 @@ using System.Threading;
 using FakeXrmEasy.Tests.PluginsForTesting;
 using Crm;
 using System.Reflection;
+using Microsoft.Xrm.Sdk.Client;
 
 namespace FakeXrmEasy.Tests
 {
@@ -269,6 +272,38 @@ namespace FakeXrmEasy.Tests
             var service2 = context.GetFakedOrganizationService();
 
             Assert.Equal(service, service2);
+        }
+
+        [Fact]
+        public void When_using_an_initialised_context_with_linq_and_searching_on_id_it_finds_the_entity()
+        {
+            var context = new XrmFakedContext();
+            var testGuid = Guid.NewGuid();
+
+            var productType = new ProductTypes
+            {
+                Id = testGuid,
+                Name = "TAILORED"
+            };
+
+            var initializationEntities = new List<Entity>
+            {
+                productType
+            };
+
+            context.Initialize(initializationEntities);
+
+            using (var ctx = new OrganizationServiceContext(context.GetOrganizationService()))
+            {
+                var products = ctx.CreateQuery<ProductTypes>();
+                var productsWhere = products.Where(a => a.SchemeTypesId.Equals(testGuid));
+                var productsNames = productsWhere.Select(a => a.Name);
+                var productName = productsNames.First();
+
+                Assert.NotNull(products);
+                Assert.Equal(productsWhere.First().Id, testGuid);
+                Assert.Equal(productName, "TAILORED");
+            }
         }
     }
 }
